@@ -1,0 +1,68 @@
+#!/bin/bash
+
+main() {
+    set -o errexit
+    set -o nounset
+    set -o pipefail
+
+    local FRAMES_PATH
+    local BORDERED_FRAMES_PATH
+    local GIF_FILENAME
+
+    FRAMES_PATH=$(mktemp -d)
+    BORDERED_FRAMES_PATH=$(mktemp -d)
+    GIF_FILENAME=$(dirname $0)/../src/images/s1c3.gif
+
+    trap "rm -rf $FRAMES_PATH $BORDERED_FRAMES_PATH" EXIT
+
+    save_frames $FRAMES_PATH
+    add_borders $FRAMES_PATH $BORDERED_FRAMES_PATH
+    join_gif $BORDERED_FRAMES_PATH $GIF_FILENAME
+    optimise_gif $GIF_FILENAME
+}
+
+save_frames() {
+    local FRAMES_PATH
+    FRAMES_PATH=$1
+    python3 src/cp/solutions/set1/challenge3 --frame-delay=0 \
+        | go run $GOPATH/src/github.com/nathforge/cryptopals/termvis/main.go \
+            --font-filename=/System/Library/Fonts/Menlo.ttc \
+            --output-path=$FRAMES_PATH \
+            --term-width=60 \
+            --term-height=8
+}
+
+add_borders() {
+    local FRAMES_PATH
+    local BORDERED_FRAMES_PATH
+    local DST
+    FRAMES_PATH=$1
+    BORDERED_FRAMES_PATH=$2
+    for SRC in $(ls $FRAMES_PATH/*.png | sort -n); do
+        DST=$BORDERED_FRAMES_PATH/$(basename $SRC)
+        echo "$SRC => $DST"
+        convert $SRC -background '#0F0F0F' \
+            -gravity northwest -splice 16x16 \
+            -gravity northeast -splice 8x0 \
+            $DST
+    done
+}
+
+join_gif() {
+    local BORDERED_FRAMES_PATH
+    local GIF_FILENAME
+    BORDERED_FRAMES_PATH=$1
+    GIF_FILENAME=$2
+    convert -loop 0 \
+        -delay 5 $(echo $(ls $BORDERED_FRAMES_PATH/*.png | sort -n | tail -n+2 | tail -r | tail +2 | tail -r)) \
+        -delay 500 $BORDERED_FRAMES_PATH/frame0256.png \
+        $GIF_FILENAME
+}
+
+optimise_gif() {
+    local GIF_FILENAME
+    GIF_FILENAME=$1
+    gifsicle -b -i $GIF_FILENAME -O3 --colors 32
+}
+
+main "$@"
