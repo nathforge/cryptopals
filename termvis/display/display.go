@@ -122,7 +122,13 @@ func (s *Display) WriteBytes(bytes []byte) error {
 			}
 		case ansievent.ED:
 			if v.Param == 2 {
-				// TODO: Clear screen
+				for i := 0; i < len(s.Cells); i++ {
+					cell := &s.Cells[i]
+					cell.FG = s.CurrentFG
+					cell.BG = s.CurrentBG
+					cell.Bold = s.CurrentBold
+					cell.Content = 0
+				}
 				s.Cursor.SetPos(0)
 			}
 		}

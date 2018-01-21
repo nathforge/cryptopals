@@ -1,0 +1,14 @@
+#!/bin/bash
+
+main() {
+    set -o errexit
+    set -o nounset
+    set -o pipefail
+    USAGE="$0 SET CHALLENGE [...ARGS]"
+    SET=${1?$USAGE}; shift
+    CHALLENGE=${1?$USAGE}; shift
+    PYTHONPATH=$(dirname $0)/../src \
+        python3 $(dirname $0)/../src/cp/solutions/set$SET/challenge$CHALLENGE "$@"
+}
+
+main "$@"

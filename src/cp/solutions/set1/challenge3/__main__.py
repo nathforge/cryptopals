@@ -2,13 +2,10 @@
 
 import argparse
 import binascii
-import os
 import sys
 import time
 
-sys.path.insert(0,os.path.join(os.path.dirname(__file__),"../../../.."))
-
-from cp import hexdump, langscorer, xorguess
+from cp import ansi, hexdump, langscorer, xorguess
 
 def main():
     parser = argparse.ArgumentParser()
@@ -19,40 +16,42 @@ def main():
 
     scorer = langscorer.english
     for state in xorguess.SingleByteKey(scorer, bytearray.fromhex(enc_hex)):
-        sys.stdout.write("\033[2J") # Clear screen
-        sys.stdout.write("\033[0;0H") # Move cursor to 0,0
+        sys.stdout.write(ansi.clear_screen)
+        sys.stdout.write(ansi.cursor(0, 0))
 
-        print("   Decrypt: {:.3f} [\033[1m{}\033[m] 0x{:02x}".format(
-            state.guess.score,
-            hexdump.ascii(state.guess.dec),
-            state.guess.xor_byte
-        ))
+        print(
+            "   Decrypt: "
+            "{score:.3f} "
+            "[\033[1m{dec}\033[m] "
+            "0x{xor_byte:02x}".format(
+                score=state.guess.score,
+                dec=hexdump.ascii(state.guess.dec),
+                xor_byte=state.guess.xor_byte
+            )
+        )
         print()
         for index, guess in enumerate(reversed(state.sorted_guesses[-5:])):
             if index == 0:
-                print(
+                fmt = (
                     "Best guess: "
-                    "\033[1m{:.3f}\033[m "
-                    "[\033[1m\033[33m{}\033[m] "
-                    "\033[1m0x{:02x}\033[m".format(
-                        guess.score,
-                        hexdump.ascii(guess.dec),
-                        guess.xor_byte
-                    )
+                    "\033[1m{score:.3f}\033[m "
+                    "[\033[1m\033[33m{dec}\033[m] "
+                    "\033[1m0x{xor_byte:02x}\033[m"
                 )
             else:
-                print(
+                fmt = (
                     "            "
-                    "{:.3f} "
-                    "[{}] "
-                    "0x{:02x}".format(
-                        guess.score,
-                        hexdump.ascii(guess.dec),
-                        guess.xor_byte
-                    )
+                    "{score:.3f} "
+                    "[{dec}] "
+                    "0x{xor_byte:02x}"
                 )
+            
+            print(fmt.format(
+                score=guess.score,
+                dec=hexdump.ascii(guess.dec),
+                xor_byte=guess.xor_byte
+            ))
 
-        sys.stdout.flush()
         time.sleep(args.frame_delay)
 
 if __name__ == "__main__":

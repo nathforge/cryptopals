@@ -5,31 +5,39 @@ main() {
     set -o nounset
     set -o pipefail
 
+    local TERM_WIDTH
+    local TERM_HEIGHT
+    local GIF_FILENAME
     local FRAMES_PATH
     local BORDERED_FRAMES_PATH
-    local GIF_FILENAME
+
+    TERM_WIDTH=$1
+    TERM_HEIGHT=$2
+    GIF_FILENAME=$3
 
     FRAMES_PATH=$(mktemp -d)
     BORDERED_FRAMES_PATH=$(mktemp -d)
-    GIF_FILENAME=$(dirname $0)/../src/images/s1c3.gif
 
     trap "rm -rf $FRAMES_PATH $BORDERED_FRAMES_PATH" EXIT
 
-    save_frames $FRAMES_PATH
+    save_frames $TERM_WIDTH $TERM_HEIGHT $FRAMES_PATH
     add_borders $FRAMES_PATH $BORDERED_FRAMES_PATH
     join_gif $BORDERED_FRAMES_PATH $GIF_FILENAME
     optimise_gif $GIF_FILENAME
 }
 
 save_frames() {
+    local TERM_WIDTH
+    local TERM_HEIGHT
     local FRAMES_PATH
-    FRAMES_PATH=$1
-    python3 src/cp/solutions/set1/challenge3 --frame-delay=0 \
-        | go run $GOPATH/src/github.com/nathforge/cryptopals/termvis/main.go \
-            --font-filename=/System/Library/Fonts/Menlo.ttc \
-            --output-path=$FRAMES_PATH \
-            --term-width=60 \
-            --term-height=8
+    TERM_WIDTH=$1
+    TERM_HEIGHT=$2
+    FRAMES_PATH=$3
+    go run $GOPATH/src/github.com/nathforge/cryptopals/termvis/main.go \
+        --font-filename=/System/Library/Fonts/Menlo.ttc \
+        --output-path=$FRAMES_PATH \
+        --term-width=$TERM_WIDTH \
+        --term-height=$TERM_HEIGHT
 }
 
 add_borders() {
@@ -55,7 +63,7 @@ join_gif() {
     GIF_FILENAME=$2
     convert -loop 0 \
         -delay 5 $(echo $(ls $BORDERED_FRAMES_PATH/*.png | sort -n | tail -n+2 | tail -r | tail +2 | tail -r)) \
-        -delay 500 $BORDERED_FRAMES_PATH/frame0256.png \
+        -delay 500 $(ls $BORDERED_FRAMES_PATH/*.png | sort -n | tail -n1) \
         $GIF_FILENAME
 }
 
