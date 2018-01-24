@@ -1,6 +1,6 @@
 # termvis
 
-Just enough terminal emulator to render GIFerise these Cryptopals solutions.
+Just enough terminal emulator to GIFerise my Cryptopals solutions.
 
 Saves a sequentially-numbered frame before every screen clear.
 

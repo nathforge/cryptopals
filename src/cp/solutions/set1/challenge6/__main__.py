@@ -2,7 +2,7 @@
 
 import argparse
 import base64
-import itertools
+import collections
 import sys
 import time
 
@@ -13,93 +13,110 @@ def main():
     parser.add_argument("--frame-delay", type=float, default=0.025)
     args = parser.parse_args()
 
+    for frame in iter_frames():
+        sys.stdout.write(ansi.clear_screen)
+        sys.stdout.write(ansi.cursor(0, 0))
+        print_frame(frame)
+        time.sleep(args.frame_delay)
+
+def iter_frames():
+    Frame = collections.namedtuple("Frame", ("title", "guesses", "key"))
+    Guess = collections.namedtuple("Guess", ("key_size", "distance", "key", "score", "dec"))
+
     key_size_count = 5
 
     data = get_data()
     scorer = langscorer.english
-    for ks_guess, reversed_sorted_ks_guesses in xorguess.KeySize(data):
-        sys.stdout.write(ansi.clear_screen)
-        sys.stdout.write(ansi.cursor(0, 0))
-
-        print("Shortlisting key sizes (\033[1m{}\033[m)".format(ks_guess.key_size))
-        print()
-        print("                    HammDst")
-        for index, guess in enumerate(reversed_sorted_ks_guesses[:key_size_count]):
-            if index == 0:
-                fmt = (
-                    "   Best guesses: "
-                    "\033[1;33m{key_size:2d}\033[m "
-                    "({distance:.3f})"
-                )
-            else:
-                fmt = (
-                    "                 "
-                    "{key_size:2d} "
-                    "({distance:.3f})"
-                )
-            print(fmt.format(
+    for guess, reverse_sorted_guesses in xorguess.KeySize(data):
+        guesses = [
+            Guess(
                 key_size=guess.key_size,
-                distance=guess.distance
-            ))
+                distance=guess.distance,
+                key=None,
+                score=None,
+                dec=None
+            )
+            for guess in reverse_sorted_guesses[:key_size_count]
+        ]
+        yield Frame(
+            title="Shortlisting key sizes (\033[1m{}\033[m)".format(guess.key_size),
+            guesses=guesses,
+            key=None
+        )
 
-        time.sleep(args.frame_delay)
-    
-    time.sleep(args.frame_delay)
-
-    guesses = [
-        (ks_guess, None, None, None)
-        for ks_guess in reversed_sorted_ks_guesses[:key_size_count]
-    ]
-    for index, (ks_guess, _, _, _) in enumerate(guesses):
+    for index, guess in enumerate(guesses):
         key = bytearray()
-        for transposed in blocks.transpose(data, ks_guess.key_size):
-            for key_guess, sorted_key_guesses in xorguess.SingleByteKey(scorer, transposed):
+        for transposed in blocks.transpose(data, guess.key_size):
+            for _, sorted_key_guesses in xorguess.SingleByteKey(scorer, transposed):
                 pass
             key.append(sorted_key_guesses[-1].xor_byte)
         dec = xor.repeating_bytes(data, key)
         score = scorer(dec)
 
-        guesses[index] = (ks_guess, score, key, dec)
-        guesses = sorted(guesses, key=lambda guess: (-(guess[1] or 0), guess[0].distance))
+        guesses[index] = Guess(
+            key_size=guess.key_size,
+            distance=guess.distance,
+            key=key,
+            score=score,
+            dec=dec
+        )
 
-        sys.stdout.write(ansi.clear_screen)
-        sys.stdout.write(ansi.cursor(0, 0))
+        sorted_guesses = sorted(guesses,
+            key=lambda guess: (-(guess.score or 0), guess.distance)
+        )
 
-        print("Decrypting")
-        print()
-        print("                    HammDst Score   Decrypted")
+        yield Frame(
+            title="Decrypting with key size {}".format(guess.key_size),
+            guesses=sorted_guesses,
+            key=None
+        )
 
-        for index, (ks_guess, score, key, dec) in enumerate(guesses):
-            if index == 0:
-                highlight = "\033[1;33m"
-                fmt = (
-                    "   Best guesses: "
-                    "{key_size:2d} "
-                    "({distance:.3f}) "
-                    "{score_f} "
-                    "{dec_f}"
-                )
-            else:
-                highlight = ""
-                fmt = (
-                    "                 "
-                    "{key_size:2d} "
-                    "({distance:.3f}) "
-                    "{score_f} "
-                    "{dec_f}"
-                )
-            print(fmt.format(
-                key_size=ks_guess.key_size,
-                distance=ks_guess.distance,
-                score_f="" if score is None else "({}{:.3f}\033[m)".format(highlight, score),
-                dec_f="" if dec is None else "[{}{}\033[m]...".format(highlight, hexdump.ascii(dec[:40]))
-            ))
+    yield Frame(
+        title="Access granted",
+        guesses=sorted_guesses,
+        key=sorted_guesses[0].key
+    )
 
-        time.sleep(args.frame_delay * 5)
-
-    _, _, key, dec = guesses[0]
+def print_frame(frame):
+    print("\033[32mCrypto Smasher v3.10\033[m")
+    print(frame.title)
     print()
-    print("               Key: [\033[1;33m{}\033[m]".format(hexdump.ascii(key)))
+
+    if frame.guesses[0].dec is not None:
+        print("                    HammDst Score   Decrypted")
+    else:
+        print("                    HammDst Score")
+
+    for index, guess in enumerate(frame.guesses):
+        if index == 0:
+            highlight = "\033[1;33m"
+            fmt = (
+                "   Best guesses: "
+                "{key_size:2d} "
+                "({distance:.3f}) "
+                "{score_f} "
+                "{dec_f}"
+            )
+        else:
+            highlight = ""
+            fmt = (
+                "                 "
+                "{key_size:2d} "
+                "({distance:.3f}) "
+                "{score_f} "
+                "{dec_f}"
+            )
+
+        print(fmt.format(
+            key_size=guess.key_size,
+            distance=guess.distance,
+            score_f="" if guess.score is None else "({}{:.3f}\033[m)".format(highlight, guess.score),
+            dec_f="" if guess.dec is None else "[{}{}\033[m]...".format(highlight, hexdump.ascii(guess.dec[:40]))
+        ))
+
+    if frame.key is not None:
+        print()
+        print("               Key: [\033[1;33m{}\033[m]".format(hexdump.ascii(frame.key)))
 
 def get_data():
     return bytearray(base64.b64decode("""
