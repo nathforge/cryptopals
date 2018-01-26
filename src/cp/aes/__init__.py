@@ -1,3 +1,5 @@
+import collections
+
 import oscrypto.symmetric
 
 from cp import blocks
@@ -25,3 +27,12 @@ def decrypt_ecb(key, data):
         dec_block = oscrypto.symmetric.aes_cbc_no_padding_decrypt(key, block, null_iv)
         result.extend(dec_block)
     return result
+
+def count_blocks(data):
+    return collections.Counter(
+        bytes(position.slice(data))
+        for position in blocks.positions(len(data), 16)
+    )
+
+def detect_ecb(data, min_repeat=2):
+    return count_blocks(data).most_common(1)[0][1] > min_repeat
