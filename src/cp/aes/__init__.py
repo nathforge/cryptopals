@@ -33,7 +33,7 @@ def decrypt_ecb(key, data):
 
 def random_iv():
     sr = random.SystemRandom()
-    return bytearray(sr.randint(0,255) for _ in xrange(BLOCK_SIZE))
+    return bytearray(sr.randint(0,255) for _ in range(BLOCK_SIZE))
 
 def encrypt_cbc(key, iv, data):
     key = bytes(key)

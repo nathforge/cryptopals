@@ -7,8 +7,8 @@ from cp import aes, hexdump
 def main():
     data = get_data()
     key = bytearray("YELLOW SUBMARINE", "utf8")
-    iv = bytearray([0] * 16)
-    dec = aes.decrypt_cbc(key, iv, data)
+    dec = aes.decrypt_cbc(key, bytearray([0] * 16), data)
+    iv = aes.random_iv()
     enc = aes.encrypt_cbc(key, iv, dec)
     dec2 = aes.decrypt_cbc(key, iv, enc)
     print(hexdump.ascii(dec2))
