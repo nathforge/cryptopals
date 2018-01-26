@@ -38,7 +38,7 @@ def random_iv():
 def encrypt_cbc(key, iv, data):
     key = bytes(key)
     null_iv = bytes([0] * BLOCK_SIZE)
-    prev_enc_block = bytes([0] * BLOCK_SIZE)
+    prev_enc_block = iv
     result = bytearray()
     for position in blocks.positions(len(data), BLOCK_SIZE):
         block = bytes(position.slice(data))
