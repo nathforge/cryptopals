@@ -2,7 +2,7 @@
 
 main() {
     $(dirname $0)/../solution 1 3 --frame-delay=0 \
-        | $(dirname $0)/build_image 60 8 $(dirname $0)/../../notes/images/s1c3.gif
+        | $(dirname $0)/build_image 60 8 $(dirname $0)/../../images/s1c3.gif
 }
 
 main "$@"

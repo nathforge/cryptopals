@@ -27,6 +27,8 @@ def iter_frames():
 
     data = get_data()
     scorer = langscorer.english
+
+    # Guess key size
     for guess, reverse_sorted_guesses in xorguess.KeySize(data):
         guesses = [
             Guess(
@@ -44,6 +46,7 @@ def iter_frames():
             key=None
         )
 
+    # Iterate through key sizes, guess key
     for index, guess in enumerate(guesses):
         key = bytearray()
         for transposed in blocks.transpose(data, guess.key_size):
