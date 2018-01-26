@@ -1,0 +1,8 @@
+#!/bin/bash
+
+main() {
+    $(dirname $0)/../solution 1 4 --frame-delay=0 \
+        | $(dirname $0)/build_image 57 9 $(dirname $0)/../../images/s1c4.gif
+}
+
+main "$@"
