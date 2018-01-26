@@ -1,0 +1,2 @@
+cffi==1.11.4 # Required by oscrypto
+oscrypto==0.19.1

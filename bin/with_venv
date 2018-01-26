@@ -1,0 +1,27 @@
+#!/bin/bash
+
+main() {
+    set -o errexit
+    set -o nounset
+    set -o pipefail
+
+    local VIRTUALENV_PATH="$(dirname $0)/../.venv"
+
+    local REQUIREMENTS="$(dirname $0)/../requirements.txt"
+
+    local REQUIREMENTS_HASH="$(shasum "$REQUIREMENTS" | cut -d' ' -f1)"
+    local REQUIREMENTS_HASH_FILENAME="$VIRTUALENV_PATH/.requirements-hash"
+
+    if [[ ! -f $VIRTUALENV_PATH/bin/python ]]; then
+        virtualenv --python=python3.5 "$VIRTUALENV_PATH"
+    fi
+
+    if [[ ! -f $REQUIREMENTS_HASH_FILENAME ]] || [[ $(cat "$REQUIREMENTS_HASH_FILENAME")  != $REQUIREMENTS_HASH ]]; then
+        "$VIRTUALENV_PATH/bin/pip" install -r "$REQUIREMENTS"
+        echo "$REQUIREMENTS_HASH" >"$REQUIREMENTS_HASH_FILENAME"
+    fi
+
+    PATH="$VIRTUALENV_PATH/bin:$PATH" "$@"
+}
+
+main "$@"
